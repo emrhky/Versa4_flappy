@@ -1,0 +1,38 @@
+name: Fitbit App Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Kodları çek
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # 2. Node.js Kurulumu (Fitbit SDK Node 14-16 arası stabildir ama 16 önerilir)
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    # 3. Bağımlılıkları Yükle
+    - name: Install Dependencies
+      run: npm install
+
+    # 4. Uygulamayı Derle (Versa 4 ve Sense 2 için)
+    - name: Build Project
+      run: npx fitbit-build
+
+    # 5. Oluşan .fba Dosyasını Yükle
+    - name: Upload FBA Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: flappy-bird-versa4
+        path: build/*.fba
+        retention-days: 5
