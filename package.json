@@ -1,0 +1,23 @@
+{
+  "name": "fitbit-flappy-bird",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@fitbit/sdk": "~6.2.0-pre.1",
+    "@fitbit/sdk-cli": "~1.8.0-pre.10"
+  },
+  "fitbit": {
+    "appUUID": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+    "appType": "app",
+    "appDisplayName": "Flappy Bird",
+    "iconFile": "resources/icon.png",
+    "wipeColor": "#70c5ce",
+    "requestedPermissions": [],
+    "buildTargets": [
+      "mira",
+      "ares"
+    ],
+    "defaultLanguage": "en-US"
+  }
+}
