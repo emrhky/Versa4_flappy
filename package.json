@@ -15,8 +15,8 @@
     "wipeColor": "#70c5ce",
     "requestedPermissions": [],
     "buildTargets": [
-      "mira",
-      "ares"
+      "hera",
+      "rhea"
     ],
     "defaultLanguage": "en-US"
   }
