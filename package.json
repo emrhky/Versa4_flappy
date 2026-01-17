@@ -8,7 +8,7 @@
     "@fitbit/sdk-cli": "~1.8.0-pre.10"
   },
   "fitbit": {
-    "appUUID": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+    "appUUID": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
     "appType": "app",
     "appDisplayName": "Flappy Bird",
     "iconFile": "resources/icon.png",
