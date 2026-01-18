@@ -33,7 +33,7 @@ let gameState = STATE_START;
 let birdY = 168;
 let velocity = 0;
 let score = 0;
-let highScoreData = { score: 0, date: "---" }; 
+let highScoreData = { score: 0, date: "--.--.--" }; 
 let animationFrameRequest;
 let speedLevel = 0;
 
@@ -63,10 +63,14 @@ display.autoOff = false;
 function loadHighScore() {
   try {
     if (fs.existsSync(HIGHSCORE_FILE)) {
-      highScoreData = fs.readFileSync(HIGHSCORE_FILE, "json");
+      let data = fs.readFileSync(HIGHSCORE_FILE, "json");
+      // Okunan verinin düzgün olup olmadığını kontrol et
+      if (data && data.score !== undefined) {
+        highScoreData = data;
+      }
     }
   } catch (err) {
-    console.error("High Score okuma hatası: " + err);
+    console.error("HS Okuma Hatası: " + err);
   }
 }
 
@@ -74,10 +78,11 @@ function saveHighScore() {
   try {
     fs.writeFileSync(HIGHSCORE_FILE, highScoreData, "json");
   } catch (err) {
-    console.error("High Score yazma hatası: " + err);
+    console.error("HS Yazma Hatası: " + err);
   }
 }
 
+// Tarih Formatı: DD.MM.YY (Kısa Yıl)
 function getCurrentDate() {
   let today = new Date();
   let day = today.getDate();
@@ -87,39 +92,38 @@ function getCurrentDate() {
   if(day < 10) day = '0' + day;
   if(month < 10) month = '0' + month;
   
-  return `${day}.${month}.${year}`;
+  // Yılın son 2 hanesini al (2026 -> 26)
+  let shortYear = year.toString().slice(-2);
+  
+  return `${day}.${month}.${shortYear}`;
 }
 
-// --- MENÜ YÖNETİMİ (DÜZELTİLDİ) ---
+// --- MENÜ YÖNETİMİ ---
 function updateMenuUI(state) {
   if (state === STATE_START) {
-    // AÇILIŞ EKRANI
+    // AÇILIŞ
     menuTitle.text = "FLAPPY BIRD";
     menuTitle.style.fill = "yellow";
     menuSubtitle.text = "Başlamak İçin Dokun";
     
     menuLabel.text = "EN YÜKSEK SKOR";
-    
-    // Değer sadece rakam (Büyük Font)
     menuValue.text = `${highScoreData.score}`;
     
-    // Tarih altına küçük fontla (Böylece kesilmez)
+    // Parantez içinde tarih
     menuExtra.text = `(${highScoreData.date})`;
     
     menuScreen.style.display = "inline";
   } 
   else if (state === STATE_GAMEOVER) {
-    // GAME OVER EKRANI
+    // GAME OVER
     menuTitle.text = "GAME OVER";
     menuTitle.style.fill = "red";
     menuSubtitle.text = "Tekrar Oyna";
     
     menuLabel.text = "SKORUN";
-    // O anki skor (Büyük Font)
     menuValue.text = `${score}`; 
     
-    // Altına Rekor ve Tarihi (Küçük Font)
-    // Tarihli rekor isteğin burada:
+    // Alt kısımda Rekor + Tarih
     menuExtra.text = `Rekor: ${highScoreData.score} (${highScoreData.date})`;
     
     menuScreen.style.display = "inline";
@@ -139,7 +143,7 @@ clock.ontick = (evt) => {
   timeText.text = `${hours}:${mins}`;
 };
 
-// --- EKRAN DURUMU ---
+// --- EKRAN ---
 display.addEventListener("change", () => {
   if (!display.on) {
     if (gameState === STATE_PLAYING) {
@@ -225,18 +229,15 @@ function updateBird() {
 }
 
 function updatePipes() {
-  // --- ZORLUK SEVİYELERİ (GÜNCELLENDİ) ---
-  // Skor 10 -> Hız 4.5
+  // --- ZORLUK ---
   if (score > 10 && speedLevel === 0) {
     currentPipeSpeed = 4.5;
     speedLevel = 1;
   }
-  // Skor 20 -> Hız 5.5
   else if (score > 20 && speedLevel === 1) {
     currentPipeSpeed = 5.5;
     speedLevel = 2;
   }
-  // Skor 30 -> Hız 6.5
   else if (score > 30 && speedLevel === 2) {
     currentPipeSpeed = 6.5;
     speedLevel = 3;
