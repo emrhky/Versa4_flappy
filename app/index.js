@@ -35,7 +35,7 @@ let velocity = 0;
 let score = 0;
 let highScoreData = { score: 0, date: "---" }; 
 let animationFrameRequest;
-let speedLevel = 0; // Hız seviyesi kontrolü (0, 1, 2, 3)
+let speedLevel = 0;
 
 // --- DOM Elemanları ---
 const bird = document.getElementById("bird");
@@ -48,7 +48,7 @@ const menuTitle = document.getElementById("menu-title");
 const menuSubtitle = document.getElementById("menu-subtitle");
 const menuLabel = document.getElementById("menu-label");
 const menuValue = document.getElementById("menu-value");
-const menuExtra = document.getElementById("menu-extra"); // Yeni alan
+const menuExtra = document.getElementById("menu-extra");
 
 const pausedText = document.getElementById("paused-text");
 
@@ -90,28 +90,36 @@ function getCurrentDate() {
   return `${day}.${month}.${year}`;
 }
 
-// --- MENÜ YÖNETİMİ ---
+// --- MENÜ YÖNETİMİ (DÜZELTİLDİ) ---
 function updateMenuUI(state) {
   if (state === STATE_START) {
+    // AÇILIŞ EKRANI
     menuTitle.text = "FLAPPY BIRD";
     menuTitle.style.fill = "yellow";
     menuSubtitle.text = "Başlamak İçin Dokun";
     
     menuLabel.text = "EN YÜKSEK SKOR";
-    menuValue.text = `${highScoreData.score} (${highScoreData.date})`;
-    menuExtra.text = ""; // Start ekranında ekstra bilgi yok
+    
+    // Değer sadece rakam (Büyük Font)
+    menuValue.text = `${highScoreData.score}`;
+    
+    // Tarih altına küçük fontla (Böylece kesilmez)
+    menuExtra.text = `(${highScoreData.date})`;
     
     menuScreen.style.display = "inline";
   } 
   else if (state === STATE_GAMEOVER) {
+    // GAME OVER EKRANI
     menuTitle.text = "GAME OVER";
     menuTitle.style.fill = "red";
     menuSubtitle.text = "Tekrar Oyna";
     
     menuLabel.text = "SKORUN";
+    // O anki skor (Büyük Font)
     menuValue.text = `${score}`; 
     
-    // Game Over'da Rekoru altta göster
+    // Altına Rekor ve Tarihi (Küçük Font)
+    // Tarihli rekor isteğin burada:
     menuExtra.text = `Rekor: ${highScoreData.score} (${highScoreData.date})`;
     
     menuScreen.style.display = "inline";
@@ -217,18 +225,18 @@ function updateBird() {
 }
 
 function updatePipes() {
-  // --- ZORLUK SEVİYELERİ ---
-  // Skor 10 olunca -> Hız 4.5
+  // --- ZORLUK SEVİYELERİ (GÜNCELLENDİ) ---
+  // Skor 10 -> Hız 4.5
   if (score > 10 && speedLevel === 0) {
     currentPipeSpeed = 4.5;
     speedLevel = 1;
   }
-  // Skor 20 olunca -> Hız 5.5
+  // Skor 20 -> Hız 5.5
   else if (score > 20 && speedLevel === 1) {
     currentPipeSpeed = 5.5;
     speedLevel = 2;
   }
-  // Skor 30 olunca -> Hız 6.5
+  // Skor 30 -> Hız 6.5
   else if (score > 30 && speedLevel === 2) {
     currentPipeSpeed = 6.5;
     speedLevel = 3;
@@ -327,7 +335,7 @@ function resetGameEntities() {
   birdY = 168;
   velocity = 0;
   currentPipeSpeed = INITIAL_SPEED;
-  speedLevel = 0; // Hız seviyesini sıfırla
+  speedLevel = 0;
   
   bird.href = "bird-mid.png"; 
 
