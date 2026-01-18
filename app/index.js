@@ -1,6 +1,7 @@
 import document from "document";
 import { display } from "display";
 import clock from "clock";
+import * as fs from "fs"; // Dosya sistemi
 
 // --- AYARLAR ---
 const GRAVITY = 0.7;
@@ -8,9 +9,9 @@ const LIFT = -9;
 const GAP_SIZE = 110; 
 const SCREEN_HEIGHT = 336;
 const GROUND_Y = 300;
-const INITIAL_SPEED = 3.5; // Başlangıç hızı
+const INITIAL_SPEED = 3.5;
+const HIGHSCORE_FILE = "highscore.json"; // Kayıt dosyası
 
-// Değişken hız
 let currentPipeSpeed = INITIAL_SPEED;
 
 // --- GÖRSEL BOYUTLARI ---
@@ -20,21 +21,36 @@ const BIRD_X_POS = 63;
 const PIPE_TOTAL_WIDTH = 52; 
 const PIPE_CAP_HEIGHT = 26; 
 
+// --- Oyun Durumları ---
+const STATE_START = 0;   // Bekleme ekranı
+const STATE_PLAYING = 1; // Oyun oynanıyor
+const STATE_PAUSED = 2;  // Bildirim geldi / Ekran kapandı
+const STATE_GAMEOVER = 3;// Yandı
+
+let gameState = STATE_START;
+
 // --- Değişkenler ---
 let birdY = 168;
 let velocity = 0;
 let score = 0;
-let isGameOver = false;
-let isPlaying = false;
+let highScoreData = { score: 0, date: "---" }; // Varsayılan rekor
 let animationFrameRequest;
-let isHardMode = false; // Zorluk kontrolü için bayrak
+let isHardMode = false;
 
 // --- DOM Elemanları ---
 const bird = document.getElementById("bird");
 const scoreText = document.getElementById("score-text");
 const timeText = document.getElementById("time-text");
 const touchLayer = document.getElementById("touch-layer");
+
+const startScreen = document.getElementById("start-screen");
+const startHighScoreText = document.getElementById("start-high-score");
+
 const gameOverScreen = document.getElementById("game-over-screen");
+const finalScoreText = document.getElementById("final-score");
+const endHighScoreText = document.getElementById("end-high-score");
+
+const pausedText = document.getElementById("paused-text");
 
 const pipePairs = [
   { group: document.getElementById("pipe-pair-1"), top: document.getElementById("top-pipe-1"), bottom: document.getElementById("bottom-pipe-1"), x: 350, passed: false },
@@ -42,6 +58,47 @@ const pipePairs = [
 ];
 
 display.autoOff = false;
+
+// --- YENİ: Dosya İşlemleri (High Score) ---
+function loadHighScore() {
+  try {
+    // Dosya varsa oku
+    if (fs.existsSync(HIGHSCORE_FILE)) {
+      highScoreData = fs.readFileSync(HIGHSCORE_FILE, "json");
+    }
+  } catch (err) {
+    console.error("High Score okuma hatası: " + err);
+    // Hata olursa varsayılan kalır
+  }
+  updateHighScoreUI();
+}
+
+function saveHighScore() {
+  try {
+    fs.writeFileSync(HIGHSCORE_FILE, highScoreData, "json");
+  } catch (err) {
+    console.error("High Score yazma hatası: " + err);
+  }
+}
+
+function updateHighScoreUI() {
+  const text = `${highScoreData.score} (${highScoreData.date})`;
+  startHighScoreText.text = text;
+  endHighScoreText.text = text;
+}
+
+// Şu anki tarihi formatla (GG.AA.YYYY)
+function getCurrentDate() {
+  let today = new Date();
+  let day = today.getDate();
+  let month = today.getMonth() + 1; // Ay 0'dan başlar
+  let year = today.getFullYear();
+  
+  if(day < 10) day = '0' + day;
+  if(month < 10) month = '0' + month;
+  
+  return `${day}.${month}.${year}`;
+}
 
 // --- SAAT ---
 clock.granularity = "minutes";
@@ -53,26 +110,82 @@ clock.ontick = (evt) => {
   timeText.text = `${hours}:${mins}`;
 };
 
-function init() {
-  resetGame();
-  touchLayer.onclick = () => {
-    if (isGameOver) {
-      resetGame();
-    } else if (!isPlaying) {
-      isPlaying = true;
-      gameLoop();
-      velocity = LIFT;
-    } else {
-      velocity = LIFT;
+// --- EKRAN DURUMU / PAUSE ---
+// Bildirim gelirse veya ekran kapanırsa oyunu dondur
+display.addEventListener("change", () => {
+  if (!display.on) {
+    // Ekran kapandıysa ve oyun oynanıyorsa PAUSE moduna al
+    if (gameState === STATE_PLAYING) {
+      gameState = STATE_PAUSED;
+      cancelAnimationFrame(animationFrameRequest);
+      // Ekranda PAUSED yazısı gösterilebilir veya devam edince dokunması beklenebilir
     }
-  };
+  } else {
+    // Ekran açıldı
+    if (gameState === STATE_PAUSED) {
+      // Direkt başlamak yerine "Paused" yazısı gösterelim, dokununca devam etsin
+      pausedText.style.display = "inline";
+    }
+  }
+});
+
+function init() {
+  loadHighScore(); // Rekoru yükle
+  
+  // Başlangıç durumu ayarla
+  gameState = STATE_START;
+  startScreen.style.display = "inline";
+  gameOverScreen.style.display = "none";
+  scoreText.text = ""; // Bekleme ekranında skoru gizle
+  
+  // Kuşu ortada tut
+  birdY = 168;
+  bird.y = birdY - (BIRD_HEIGHT / 2);
+  
+  touchLayer.onclick = handleInput;
+}
+
+function handleInput() {
+  if (gameState === STATE_START) {
+    // Oyunu Başlat
+    startGame();
+  } 
+  else if (gameState === STATE_PLAYING) {
+    // Zıpla
+    velocity = LIFT;
+  } 
+  else if (gameState === STATE_PAUSED) {
+    // Pause'dan çık ve devam et
+    gameState = STATE_PLAYING;
+    pausedText.style.display = "none";
+    gameLoop(); // Döngüyü tekrar başlat
+    velocity = LIFT; // İlk dokunuşla zıplasın
+  }
+  else if (gameState === STATE_GAMEOVER) {
+    // Yeniden Başlat (Start ekranına dön)
+    init();
+  }
+}
+
+function startGame() {
+  resetGameEntities();
+  gameState = STATE_PLAYING;
+  startScreen.style.display = "none";
+  scoreText.text = "0";
+  
+  // Hareketi başlat
+  velocity = LIFT;
+  gameLoop();
 }
 
 function gameLoop() {
-  if (isGameOver) return;
+  // Eğer oyun oynamıyorsa döngüyü kır
+  if (gameState !== STATE_PLAYING) return;
+
   updateBird();
   updatePipes();
   checkCollisions();
+  
   animationFrameRequest = requestAnimationFrame(gameLoop);
 }
 
@@ -80,7 +193,6 @@ function updateBird() {
   velocity += GRAVITY;
   birdY += velocity;
 
-  // Zemin ve Tavan
   if (birdY + (BIRD_HEIGHT / 2) >= GROUND_Y) { 
     birdY = GROUND_Y - (BIRD_HEIGHT / 2);
     gameOver();
@@ -92,21 +204,14 @@ function updateBird() {
   
   bird.y = birdY - (BIRD_HEIGHT / 2);
 
-  // Animasyon
-  if (velocity < -2) {
-    bird.href = "bird-down.png";
-  } else if (velocity > 2) {
-    bird.href = "bird-up.png";
-  } else {
-    bird.href = "bird-mid.png";
-  }
+  if (velocity < -2) bird.href = "bird-down.png";
+  else if (velocity > 2) bird.href = "bird-up.png";
+  else bird.href = "bird-mid.png";
 }
 
 function updatePipes() {
-  // ZORLUK KONTROLÜ
-  // Skor 10'u geçtiyse ve henüz hızlanmadıysa
   if (score > 10 && !isHardMode) {
-    currentPipeSpeed = 4.5; // Hızı artır (3.5 -> 4.5)
+    currentPipeSpeed = 4.5;
     isHardMode = true;
   }
 
@@ -131,19 +236,18 @@ function updatePipes() {
 
 function setPipeHeight(pipeElement, height, isTopPipe) {
   const body = pipeElement.getElementById("body");
-  const bodyHighlight = pipeElement.getElementById("body-highlight"); // Parlama şeridi
+  const bodyHighlight = pipeElement.getElementById("body-highlight");
   const cap = pipeElement.getElementById("cap");
   const capHighlight = pipeElement.getElementById("cap-highlight");
 
   const bodyHeight = Math.max(0, height - PIPE_CAP_HEIGHT);
   
-  // Hem gövdenin hem de üzerindeki parlama şeridinin boyunu ayarla
   body.height = bodyHeight;
-  bodyHighlight.height = bodyHeight; // Şeridi de uzat!
+  bodyHighlight.height = bodyHeight;
 
   if (isTopPipe) {
     cap.y = bodyHeight;
-    capHighlight.y = bodyHeight; // Kapağın parlamasını da taşı
+    capHighlight.y = bodyHeight;
   }
 }
 
@@ -168,7 +272,6 @@ function checkCollisions() {
 
   pipePairs.forEach(pair => {
     const topHeight = pair.top.getElementById("body").height + PIPE_CAP_HEIGHT;
-    // Üst Boru
     if (
       bx + padding < pair.x + PIPE_TOTAL_WIDTH &&
       bx + bw - padding > pair.x &&
@@ -176,7 +279,6 @@ function checkCollisions() {
     ) {
       gameOver();
     }
-    // Alt Boru
     if (
       bx + padding < pair.x + PIPE_TOTAL_WIDTH &&
       bx + bw - padding > pair.x &&
@@ -188,20 +290,27 @@ function checkCollisions() {
 }
 
 function gameOver() {
-  isGameOver = true;
-  isPlaying = false;
+  gameState = STATE_GAMEOVER;
   cancelAnimationFrame(animationFrameRequest);
+  
+  // High Score Kontrolü
+  if (score > highScoreData.score) {
+    highScoreData.score = score;
+    highScoreData.date = getCurrentDate(); // Tarihi al
+    saveHighScore(); // Kaydet
+    updateHighScoreUI(); // Arayüzü güncelle
+  }
+
+  // Bitiş ekranını göster
+  finalScoreText.text = score;
   gameOverScreen.style.display = "inline";
 }
 
-function resetGame() {
-  isGameOver = false;
+function resetGameEntities() {
   score = 0;
   scoreText.text = "0";
   birdY = 168;
   velocity = 0;
-  
-  // Ayarları Sıfırla
   currentPipeSpeed = INITIAL_SPEED;
   isHardMode = false;
   
@@ -216,8 +325,9 @@ function resetGame() {
   pipePairs.forEach(p => {
     p.group.groupTransform.translate.x = p.x;
   });
-
-  gameOverScreen.style.display = "none";
+  
+  pausedText.style.display = "none";
 }
 
+// Uygulamayı başlat
 init();
