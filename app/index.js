@@ -1,195 +1,45 @@
-import document from "document";
-import { display } from "display";
+<svg>
+  <image id="background" href="bg.png" x="0" y="0" width="336" height="336" />
+  <image id="ground" href="ground.png" x="0" y="300" width="336" height="112" layer="3" />
 
-// --- Ayarlar ---
-const GRAVITY = 0.6;
-const LIFT = -8;
-const PIPE_SPEED = 3;
-const GAP_SIZE = 110; 
-const SCREEN_HEIGHT = 336;
-const GROUND_Y = 300; // Zeminin başladığı Y noktası
+  <image id="bird" x="63" y="156" width="34" height="24" href="bird.png" layer="4" />
 
-// --- Görsel Boyutları ---
-const BIRD_WIDTH = 34;
-const BIRD_HEIGHT = 24;
-const BIRD_X_POS = 63;
-const PIPE_WIDTH = 52; 
+  <defs>
+    <linearGradient id="pipeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5e9a2b" />
+      <stop offset="20%" stop-color="#89e044" />
+      <stop offset="80%" stop-color="#89e044" />
+      <stop offset="100%" stop-color="#487621" />
+    </linearGradient>
 
-// --- Değişkenler ---
-let birdY = 168;
-let velocity = 0;
-let score = 0;
-let isGameOver = false;
-let isPlaying = false;
-let animationFrameRequest;
+    <symbol id="top-pipe-symbol">
+      <rect id="body" x="2" y="0" width="48" height="100" fill="url(#pipeGradient)" stroke="#2d4b15" stroke-width="2" />
+      <rect id="cap" x="0" y="100" width="52" height="26" fill="url(#pipeGradient)" stroke="#2d4b15" stroke-width="2" />
+    </symbol>
 
-// --- DOM Elemanları ---
-const bird = document.getElementById("bird");
-const scoreText = document.getElementById("score-text");
-const touchLayer = document.getElementById("touch-layer");
-const gameOverScreen = document.getElementById("game-over-screen");
+    <symbol id="bottom-pipe-symbol">
+      <rect id="cap" x="0" y="0" width="52" height="26" fill="url(#pipeGradient)" stroke="#2d4b15" stroke-width="2" />
+      <rect id="body" x="2" y="26" width="48" height="100" fill="url(#pipeGradient)" stroke="#2d4b15" stroke-width="2" />
+    </symbol>
+  </defs>
 
-// Boru Nesneleri
-const pipes = [
-  {
-    top: document.getElementById("top-pipe-1"),
-    bottom: document.getElementById("bottom-pipe-1"),
-    x: 350,
-    passed: false
-  },
-  {
-    top: document.getElementById("top-pipe-2"),
-    bottom: document.getElementById("bottom-pipe-2"),
-    x: 550,
-    passed: false
-  }
-];
-
-display.autoOff = false;
-
-function init() {
-  resetGame();
+  <g id="pipe-pair-1" transform="translate(350,0)" layer="2">
+    <use id="top-pipe-1" href="#top-pipe-symbol" />
+    <use id="bottom-pipe-1" href="#bottom-pipe-symbol" />
+  </g>
   
-  touchLayer.onclick = () => {
-    if (isGameOver) {
-      resetGame();
-    } else if (!isPlaying) {
-      isPlaying = true;
-      gameLoop();
-      velocity = LIFT;
-    } else {
-      velocity = LIFT;
-    }
-  };
-}
+  <g id="pipe-pair-2" transform="translate(550,0)" layer="2">
+    <use id="top-pipe-2" href="#top-pipe-symbol" />
+    <use id="bottom-pipe-2" href="#bottom-pipe-symbol" />
+  </g>
 
-function gameLoop() {
-  if (isGameOver) return;
-
-  updateBird();
-  updatePipes();
-  checkCollisions();
-
-  animationFrameRequest = requestAnimationFrame(gameLoop);
-}
-
-function updateBird() {
-  velocity += GRAVITY;
-  birdY += velocity;
-
-  // Zemin Çarpışması
-  if (birdY + (BIRD_HEIGHT / 2) >= GROUND_Y) { 
-    birdY = GROUND_Y - (BIRD_HEIGHT / 2);
-    gameOver();
-  }
+  <text id="score-text" x="50%" y="50" font-family="System-Bold" fill="white" font-size="40" text-anchor="middle" font-weight="bold" stroke-width="2" stroke="black" layer="5">0</text>
   
-  // Tavan Sınırı
-  if (birdY - (BIRD_HEIGHT / 2) < 0) {
-    birdY = BIRD_HEIGHT / 2;
-    velocity = 0;
-  }
-
-  bird.y = birdY - (BIRD_HEIGHT / 2);
-}
-
-function updatePipes() {
-  pipes.forEach(pipe => {
-    pipe.x -= PIPE_SPEED;
-
-    // Boru ekran dışına çıkınca başa sar
-    if (pipe.x < -PIPE_WIDTH) { 
-      pipe.x = 350;
-      pipe.passed = false;
-      randomizePipeHeight(pipe);
-    }
-
-    pipe.top.x = pipe.x;
-    pipe.bottom.x = pipe.x;
-
-    // Skor Mantığı
-    if (!pipe.passed && pipe.x < BIRD_X_POS - PIPE_WIDTH) {
-      score++;
-      scoreText.text = score;
-      pipe.passed = true;
-    }
-  });
-}
-
-function randomizePipeHeight(pipeObj) {
-  // Rastgele bir üst boru yüksekliği üret
-  let topHeight = Math.floor(Math.random() * (GROUND_Y - GAP_SIZE - 60)) + 40;
+  <svg id="game-over-screen" display="none" layer="6">
+    <rect width="100%" height="100%" fill="black" opacity="0.7" pointer-events="visible" />
+    <text x="50%" y="40%" fill="white" font-family="System-Bold" font-size="40" text-anchor="middle">GAME OVER</text>
+    <text x="50%" y="60%" fill="white" font-size="24" text-anchor="middle">Tekrar Dokun</text>
+  </svg>
   
-  // Üst boruyu ayarla
-  pipeObj.top.height = topHeight;
-  
-  // Alt boruyu ayarla
-  // Alt borunun Y noktası = Üst boru boyu + Boşluk
-  pipeObj.bottom.y = topHeight + GAP_SIZE;
-  
-  // Alt borunun boyu = (Zemin - Başladığı Yer)
-  // Negatif değer çıkmaması için max kontrolü
-  let bottomHeight = GROUND_Y - (topHeight + GAP_SIZE);
-  if (bottomHeight < 0) bottomHeight = 0;
-  
-  pipeObj.bottom.height = bottomHeight;
-}
-
-function checkCollisions() {
-  const bx = BIRD_X_POS;
-  const by = bird.y;
-  const bw = BIRD_WIDTH;
-  const bh = BIRD_HEIGHT;
-  const padding = 4; // Hitbox toleransı
-
-  pipes.forEach(pipe => {
-    // Üst Boru Çarpışma
-    if (
-      bx + padding < pipe.x + PIPE_WIDTH &&
-      bx + bw - padding > pipe.x &&
-      by + padding < pipe.top.height
-    ) {
-      gameOver();
-    }
-
-    // Alt Boru Çarpışma
-    if (
-      bx + padding < pipe.x + PIPE_WIDTH &&
-      bx + bw - padding > pipe.x &&
-      by + bh - padding > pipe.bottom.y
-    ) {
-      gameOver();
-    }
-  });
-}
-
-function gameOver() {
-  isGameOver = true;
-  isPlaying = false;
-  cancelAnimationFrame(animationFrameRequest);
-  gameOverScreen.style.display = "inline";
-}
-
-function resetGame() {
-  isGameOver = false;
-  score = 0;
-  scoreText.text = "0";
-  birdY = 168;
-  velocity = 0;
-  
-  // Boruları sıfırla
-  pipes[0].x = 350;
-  randomizePipeHeight(pipes[0]);
-  
-  pipes[1].x = 550;
-  randomizePipeHeight(pipes[1]);
-  
-  bird.y = birdY - (BIRD_HEIGHT / 2);
-  pipes.forEach(p => {
-    p.top.x = p.x;
-    p.bottom.x = p.x;
-  });
-
-  gameOverScreen.style.display = "none";
-}
-
-init();
+  <rect id="touch-layer" width="100%" height="100%" opacity="0" pointer-events="visible" layer="7" />
+</svg>
