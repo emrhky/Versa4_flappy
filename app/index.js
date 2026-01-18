@@ -1,7 +1,7 @@
 import document from "document";
 import { display } from "display";
 import clock from "clock";
-import * as fs from "fs"; // Dosya sistemi
+import * as fs from "fs";
 
 // --- AYARLAR ---
 const GRAVITY = 0.7;
@@ -10,7 +10,7 @@ const GAP_SIZE = 110;
 const SCREEN_HEIGHT = 336;
 const GROUND_Y = 300;
 const INITIAL_SPEED = 3.5;
-const HIGHSCORE_FILE = "highscore.json"; // Kayıt dosyası
+const HIGHSCORE_FILE = "highscore.json";
 
 let currentPipeSpeed = INITIAL_SPEED;
 
@@ -22,10 +22,10 @@ const PIPE_TOTAL_WIDTH = 52;
 const PIPE_CAP_HEIGHT = 26; 
 
 // --- Oyun Durumları ---
-const STATE_START = 0;   // Bekleme ekranı
-const STATE_PLAYING = 1; // Oyun oynanıyor
-const STATE_PAUSED = 2;  // Bildirim geldi / Ekran kapandı
-const STATE_GAMEOVER = 3;// Yandı
+const STATE_START = 0;   
+const STATE_PLAYING = 1; 
+const STATE_PAUSED = 2;  
+const STATE_GAMEOVER = 3;
 
 let gameState = STATE_START;
 
@@ -33,7 +33,7 @@ let gameState = STATE_START;
 let birdY = 168;
 let velocity = 0;
 let score = 0;
-let highScoreData = { score: 0, date: "---" }; // Varsayılan rekor
+let highScoreData = { score: 0, date: "---" }; 
 let animationFrameRequest;
 let isHardMode = false;
 
@@ -43,12 +43,12 @@ const scoreText = document.getElementById("score-text");
 const timeText = document.getElementById("time-text");
 const touchLayer = document.getElementById("touch-layer");
 
-const startScreen = document.getElementById("start-screen");
-const startHighScoreText = document.getElementById("start-high-score");
-
-const gameOverScreen = document.getElementById("game-over-screen");
-const finalScoreText = document.getElementById("final-score");
-const endHighScoreText = document.getElementById("end-high-score");
+// Ortak Menü Elemanları
+const menuScreen = document.getElementById("menu-screen");
+const menuTitle = document.getElementById("menu-title");
+const menuSubtitle = document.getElementById("menu-subtitle");
+const menuLabel = document.getElementById("menu-label");
+const menuValue = document.getElementById("menu-value");
 
 const pausedText = document.getElementById("paused-text");
 
@@ -59,18 +59,15 @@ const pipePairs = [
 
 display.autoOff = false;
 
-// --- YENİ: Dosya İşlemleri (High Score) ---
+// --- DOSYA İŞLEMLERİ ---
 function loadHighScore() {
   try {
-    // Dosya varsa oku
     if (fs.existsSync(HIGHSCORE_FILE)) {
       highScoreData = fs.readFileSync(HIGHSCORE_FILE, "json");
     }
   } catch (err) {
     console.error("High Score okuma hatası: " + err);
-    // Hata olursa varsayılan kalır
   }
-  updateHighScoreUI();
 }
 
 function saveHighScore() {
@@ -81,23 +78,46 @@ function saveHighScore() {
   }
 }
 
-function updateHighScoreUI() {
-  const text = `${highScoreData.score} (${highScoreData.date})`;
-  startHighScoreText.text = text;
-  endHighScoreText.text = text;
-}
-
-// Şu anki tarihi formatla (GG.AA.YYYY)
 function getCurrentDate() {
   let today = new Date();
   let day = today.getDate();
-  let month = today.getMonth() + 1; // Ay 0'dan başlar
+  let month = today.getMonth() + 1; 
   let year = today.getFullYear();
   
   if(day < 10) day = '0' + day;
   if(month < 10) month = '0' + month;
   
   return `${day}.${month}.${year}`;
+}
+
+// --- MENÜ YÖNETİMİ (Yeni Fonksiyon) ---
+function updateMenuUI(state) {
+  if (state === STATE_START) {
+    menuTitle.text = "FLAPPY BIRD";
+    menuTitle.style.fill = "yellow";
+    menuSubtitle.text = "Başlamak İçin Dokun";
+    menuLabel.text = "EN YÜKSEK SKOR";
+    menuValue.text = `${highScoreData.score} (${highScoreData.date})`;
+    menuScreen.style.display = "inline";
+  } 
+  else if (state === STATE_GAMEOVER) {
+    menuTitle.text = "GAME OVER";
+    menuTitle.style.fill = "red"; // Başlık kırmızı olsun
+    menuSubtitle.text = "Tekrar Oyna";
+    
+    // Game Over ekranında mevcut skoru göster, altına da rekoru sıkıştırabiliriz
+    // Ama senin isteğin üzerine tek tasarım:
+    menuLabel.text = "SKORUN";
+    menuValue.text = `${score}`; // Sadece o anki skor
+    
+    // İstersen burada rekoru da gösterebiliriz ama tasarım tek satır.
+    // Şimdilik sadece son skoru gösteriyorum.
+    
+    menuScreen.style.display = "inline";
+  }
+  else {
+    menuScreen.style.display = "none";
+  }
 }
 
 // --- SAAT ---
@@ -110,35 +130,26 @@ clock.ontick = (evt) => {
   timeText.text = `${hours}:${mins}`;
 };
 
-// --- EKRAN DURUMU / PAUSE ---
-// Bildirim gelirse veya ekran kapanırsa oyunu dondur
+// --- EKRAN DURUMU ---
 display.addEventListener("change", () => {
   if (!display.on) {
-    // Ekran kapandıysa ve oyun oynanıyorsa PAUSE moduna al
     if (gameState === STATE_PLAYING) {
       gameState = STATE_PAUSED;
       cancelAnimationFrame(animationFrameRequest);
-      // Ekranda PAUSED yazısı gösterilebilir veya devam edince dokunması beklenebilir
     }
   } else {
-    // Ekran açıldı
     if (gameState === STATE_PAUSED) {
-      // Direkt başlamak yerine "Paused" yazısı gösterelim, dokununca devam etsin
       pausedText.style.display = "inline";
     }
   }
 });
 
 function init() {
-  loadHighScore(); // Rekoru yükle
-  
-  // Başlangıç durumu ayarla
+  loadHighScore();
   gameState = STATE_START;
-  startScreen.style.display = "inline";
-  gameOverScreen.style.display = "none";
-  scoreText.text = ""; // Bekleme ekranında skoru gizle
+  updateMenuUI(STATE_START); // Başlangıç menüsünü hazırla
+  scoreText.text = ""; 
   
-  // Kuşu ortada tut
   birdY = 168;
   bird.y = birdY - (BIRD_HEIGHT / 2);
   
@@ -147,39 +158,35 @@ function init() {
 
 function handleInput() {
   if (gameState === STATE_START) {
-    // Oyunu Başlat
     startGame();
   } 
   else if (gameState === STATE_PLAYING) {
-    // Zıpla
     velocity = LIFT;
   } 
   else if (gameState === STATE_PAUSED) {
-    // Pause'dan çık ve devam et
     gameState = STATE_PLAYING;
     pausedText.style.display = "none";
-    gameLoop(); // Döngüyü tekrar başlat
-    velocity = LIFT; // İlk dokunuşla zıplasın
+    gameLoop(); 
+    velocity = LIFT; 
   }
   else if (gameState === STATE_GAMEOVER) {
-    // Yeniden Başlat (Start ekranına dön)
-    init();
+    // Yeniden başlatırken önce resetle, sonra direkt başlat
+    resetGameEntities();
+    startGame();
   }
 }
 
 function startGame() {
   resetGameEntities();
   gameState = STATE_PLAYING;
-  startScreen.style.display = "none";
+  updateMenuUI(STATE_PLAYING); // Menüyü gizle
   scoreText.text = "0";
   
-  // Hareketi başlat
   velocity = LIFT;
   gameLoop();
 }
 
 function gameLoop() {
-  // Eğer oyun oynamıyorsa döngüyü kır
   if (gameState !== STATE_PLAYING) return;
 
   updateBird();
@@ -293,17 +300,14 @@ function gameOver() {
   gameState = STATE_GAMEOVER;
   cancelAnimationFrame(animationFrameRequest);
   
-  // High Score Kontrolü
   if (score > highScoreData.score) {
     highScoreData.score = score;
-    highScoreData.date = getCurrentDate(); // Tarihi al
-    saveHighScore(); // Kaydet
-    updateHighScoreUI(); // Arayüzü güncelle
+    highScoreData.date = getCurrentDate();
+    saveHighScore();
   }
-
-  // Bitiş ekranını göster
-  finalScoreText.text = score;
-  gameOverScreen.style.display = "inline";
+  
+  // Game Over ekranını göster (Ortak menüyü kullanır)
+  updateMenuUI(STATE_GAMEOVER);
 }
 
 function resetGameEntities() {
@@ -329,5 +333,4 @@ function resetGameEntities() {
   pausedText.style.display = "none";
 }
 
-// Uygulamayı başlat
 init();
