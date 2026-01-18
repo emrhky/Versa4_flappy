@@ -1,22 +1,24 @@
 <svg>
   <image id="background" href="bg.png" x="0" y="0" width="336" height="336" />
-  
   <image id="ground" href="ground.png" x="0" y="300" width="336" height="112" layer="10" />
 
   <image id="bird" x="63" y="156" width="34" height="24" href="bird-mid.png" layer="20" />
 
   <defs>
-    <linearGradient id="pipeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#543847" /> <stop offset="10%" stop-color="#73bf2e" /> <stop offset="50%" stop-color="#b6e656" /> <stop offset="90%" stop-color="#73bf2e" /> <stop offset="100%" stop-color="#543847" /> </linearGradient>
-
     <symbol id="top-pipe-symbol">
-      <rect id="body" x="2" y="0" width="48" height="100" fill="url(#pipeGradient)" stroke="black" stroke-width="2" />
-      <rect id="cap" x="0" y="100" width="52" height="26" fill="url(#pipeGradient)" stroke="black" stroke-width="2" />
+      <rect id="body" x="2" y="0" width="48" height="100" fill="#73bf2e" stroke="black" stroke-width="2" />
+      <rect id="body-highlight" x="6" y="0" width="4" height="100" fill="#b6e656" />
+      
+      <rect id="cap" x="0" y="100" width="52" height="26" fill="#73bf2e" stroke="black" stroke-width="2" />
+      <rect id="cap-highlight" x="4" y="100" width="4" height="24" fill="#b6e656" />
     </symbol>
 
     <symbol id="bottom-pipe-symbol">
-      <rect id="cap" x="0" y="0" width="52" height="26" fill="url(#pipeGradient)" stroke="black" stroke-width="2" />
-      <rect id="body" x="2" y="26" width="48" height="100" fill="url(#pipeGradient)" stroke="black" stroke-width="2" />
+      <rect id="cap" x="0" y="0" width="52" height="26" fill="#73bf2e" stroke="black" stroke-width="2" />
+      <rect id="cap-highlight" x="4" y="2" width="4" height="22" fill="#b6e656" />
+      
+      <rect id="body" x="2" y="26" width="48" height="100" fill="#73bf2e" stroke="black" stroke-width="2" />
+      <rect id="body-highlight" x="6" y="26" width="4" height="100" fill="#b6e656" />
     </symbol>
   </defs>
 
@@ -30,9 +32,9 @@
     <use id="bottom-pipe-2" href="#bottom-pipe-symbol" />
   </g>
 
-  <text id="time-text" x="10" y="40" font-family="System-Bold" fill="white" font-size="28" text-anchor="start" stroke-width="1" stroke="black" layer="30">12:00</text>
+  <text id="time-text" x="40" y="40" font-family="System-Bold" fill="white" font-size="28" text-anchor="start" stroke-width="1" stroke="black" layer="30">12:00</text>
   
-  <text id="score-text" x="326" y="50" font-family="System-Bold" fill="white" font-size="40" text-anchor="end" font-weight="bold" stroke-width="2" stroke="black" layer="30">0</text>
+  <text id="score-text" x="296" y="50" font-family="System-Bold" fill="white" font-size="40" text-anchor="end" font-weight="bold" stroke-width="2" stroke="black" layer="30">0</text>
   
   <svg id="game-over-screen" display="none" layer="40">
     <rect width="100%" height="100%" fill="black" opacity="0.7" pointer-events="visible" />
