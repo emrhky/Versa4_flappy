@@ -41,9 +41,9 @@
     
     <text id="menu-label" x="50%" y="60%" fill="#b6e656" font-size="18" text-anchor="middle">EN YÜKSEK SKOR</text>
     
-    <text id="menu-value" x="50%" y="75%" fill="white" font-family="System-Bold" font-size="42" text-anchor="middle">0</text>
+    <text id="menu-value" x="50%" y="75%" fill="white" font-family="System-Bold" font-size="42" text-anchor="middle" buffer-size="32">0</text>
 
-    <text id="menu-extra" x="50%" y="88%" fill="gray" font-size="18" text-anchor="middle">(---)</text>
+    <text id="menu-extra" x="50%" y="88%" fill="gray" font-family="System-Regular" font-size="18" text-anchor="middle" buffer-size="32">---</text>
   </svg>
   
   <text id="paused-text" display="none" x="50%" y="50%" fill="white" font-family="System-Bold" font-size="40" text-anchor="middle" stroke="black" stroke-width="2" layer="60">PAUSED</text>
