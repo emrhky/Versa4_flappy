@@ -1,45 +1,208 @@
-<svg>
-  <image id="background" href="bg.png" x="0" y="0" width="336" height="336" />
-  <image id="ground" href="ground.png" x="0" y="300" width="336" height="112" layer="3" />
+import document from "document";
+import { display } from "display";
 
-  <image id="bird" x="63" y="156" width="34" height="24" href="bird.png" layer="4" />
+// --- AYARLAR (HIZLANDIRILDI) ---
+const GRAVITY = 0.7;    // Yerçekimi (0.6 -> 0.7)
+const LIFT = -9;        // Zıplama Gücü (-8 -> -9)
+const PIPE_SPEED = 3.5; // Boru Hızı (3 -> 3.5)
 
-  <defs>
-    <linearGradient id="pipeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#5e9a2b" />
-      <stop offset="20%" stop-color="#89e044" />
-      <stop offset="80%" stop-color="#89e044" />
-      <stop offset="100%" stop-color="#487621" />
-    </linearGradient>
+const GAP_SIZE = 110; 
+const SCREEN_HEIGHT = 336;
+const GROUND_Y = 300;
 
-    <symbol id="top-pipe-symbol">
-      <rect id="body" x="2" y="0" width="48" height="100" fill="url(#pipeGradient)" stroke="#2d4b15" stroke-width="2" />
-      <rect id="cap" x="0" y="100" width="52" height="26" fill="url(#pipeGradient)" stroke="#2d4b15" stroke-width="2" />
-    </symbol>
+// --- GÖRSEL BOYUTLARI ---
+const BIRD_WIDTH = 34;
+const BIRD_HEIGHT = 24;
+const BIRD_X_POS = 63;
+const PIPE_TOTAL_WIDTH = 52; // Kapağın genişliği
+const PIPE_CAP_HEIGHT = 26;  // Kapağın yüksekliği
 
-    <symbol id="bottom-pipe-symbol">
-      <rect id="cap" x="0" y="0" width="52" height="26" fill="url(#pipeGradient)" stroke="#2d4b15" stroke-width="2" />
-      <rect id="body" x="2" y="26" width="48" height="100" fill="url(#pipeGradient)" stroke="#2d4b15" stroke-width="2" />
-    </symbol>
-  </defs>
+// --- Değişkenler ---
+let birdY = 168;
+let velocity = 0;
+let score = 0;
+let isGameOver = false;
+let isPlaying = false;
+let animationFrameRequest;
 
-  <g id="pipe-pair-1" transform="translate(350,0)" layer="2">
-    <use id="top-pipe-1" href="#top-pipe-symbol" />
-    <use id="bottom-pipe-1" href="#bottom-pipe-symbol" />
-  </g>
+// --- DOM Elemanları ---
+const bird = document.getElementById("bird");
+const scoreText = document.getElementById("score-text");
+const touchLayer = document.getElementById("touch-layer");
+const gameOverScreen = document.getElementById("game-over-screen");
+
+// Boru Çiftlerini Al (Grup olarak)
+const pipePairs = [
+  {
+    group: document.getElementById("pipe-pair-1"),
+    top: document.getElementById("top-pipe-1"),
+    bottom: document.getElementById("bottom-pipe-1"),
+    x: 350,
+    passed: false
+  },
+  {
+    group: document.getElementById("pipe-pair-2"),
+    top: document.getElementById("top-pipe-2"),
+    bottom: document.getElementById("bottom-pipe-2"),
+    x: 550,
+    passed: false
+  }
+];
+
+display.autoOff = false;
+
+function init() {
+  resetGame();
+  touchLayer.onclick = () => {
+    if (isGameOver) {
+      resetGame();
+    } else if (!isPlaying) {
+      isPlaying = true;
+      gameLoop();
+      velocity = LIFT;
+    } else {
+      velocity = LIFT;
+    }
+  };
+}
+
+function gameLoop() {
+  if (isGameOver) return;
+  updateBird();
+  updatePipes();
+  checkCollisions();
+  animationFrameRequest = requestAnimationFrame(gameLoop);
+}
+
+function updateBird() {
+  velocity += GRAVITY;
+  birdY += velocity;
+
+  if (birdY + (BIRD_HEIGHT / 2) >= GROUND_Y) { 
+    birdY = GROUND_Y - (BIRD_HEIGHT / 2);
+    gameOver();
+  }
+  if (birdY - (BIRD_HEIGHT / 2) < 0) {
+    birdY = BIRD_HEIGHT / 2;
+    velocity = 0;
+  }
+  bird.y = birdY - (BIRD_HEIGHT / 2);
+}
+
+// --- YENİ: Boru Güncelleme Mantığı ---
+function updatePipes() {
+  pipePairs.forEach(pair => {
+    pair.x -= PIPE_SPEED;
+
+    // Boru ekran dışına çıkınca başa sar
+    if (pair.x < -PIPE_TOTAL_WIDTH) { 
+      pair.x = 350;
+      pair.passed = false;
+      randomizePipeHeights(pair);
+    }
+
+    // Grubu taşı (içindeki üst ve alt boru beraber hareket eder)
+    pair.group.groupTransform.translate.x = pair.x;
+
+    // Skor Mantığı
+    if (!pair.passed && pair.x < BIRD_X_POS - PIPE_TOTAL_WIDTH) {
+      score++;
+      scoreText.text = score;
+      pair.passed = true;
+    }
+  });
+}
+
+// --- YENİ: Yükseklik Ayarlama Fonksiyonu ---
+function setPipeHeight(pipeElement, height, isTopPipe) {
+  const body = pipeElement.getElementById("body");
+  const cap = pipeElement.getElementById("cap");
+
+  // Gövdenin boyunu ayarla (Kapak yüksekliğini çıkararak)
+  const bodyHeight = Math.max(0, height - PIPE_CAP_HEIGHT);
+  body.height = bodyHeight;
+
+  if (isTopPipe) {
+    // Üst boru: Kapağı gövdenin altına taşı
+    cap.y = bodyHeight;
+  } else {
+    // Alt boru: Kapak zaten üstte (y=0), gövde onun altında başlar.
+    // Ekstra bir işlem gerekmez.
+  }
+}
+
+function randomizePipeHeights(pair) {
+  // Rastgele bir üst boru toplam yüksekliği
+  let topTotalHeight = Math.floor(Math.random() * (GROUND_Y - GAP_SIZE - 80)) + 50;
   
-  <g id="pipe-pair-2" transform="translate(550,0)" layer="2">
-    <use id="top-pipe-2" href="#top-pipe-symbol" />
-    <use id="bottom-pipe-2" href="#bottom-pipe-symbol" />
-  </g>
+  // Üst boruyu ayarla
+  setPipeHeight(pair.top, topTotalHeight, true);
+  
+  // Alt borunun Y pozisyonu ve yüksekliği
+  const bottomY = topTotalHeight + GAP_SIZE;
+  let bottomTotalHeight = GROUND_Y - bottomY;
+  if (bottomTotalHeight < PIPE_CAP_HEIGHT) bottomTotalHeight = PIPE_CAP_HEIGHT; // Minimum boy
 
-  <text id="score-text" x="50%" y="50" font-family="System-Bold" fill="white" font-size="40" text-anchor="middle" font-weight="bold" stroke-width="2" stroke="black" layer="5">0</text>
+  // Alt boruyu ayarla ve konumlandır
+  pair.bottom.y = bottomY;
+  setPipeHeight(pair.bottom, bottomTotalHeight, false);
+}
+
+function checkCollisions() {
+  const bx = BIRD_X_POS;
+  const by = bird.y;
+  const bw = BIRD_WIDTH;
+  const bh = BIRD_HEIGHT;
+  const padding = 4;
+
+  pipePairs.forEach(pair => {
+    // Üst Boru Çarpışma (pair.top'un toplam yüksekliğini kullan)
+    const topHeight = pair.top.getElementById("body").height + PIPE_CAP_HEIGHT;
+    if (
+      bx + padding < pair.x + PIPE_TOTAL_WIDTH &&
+      bx + bw - padding > pair.x &&
+      by + padding < topHeight
+    ) {
+      gameOver();
+    }
+
+    // Alt Boru Çarpışma (pair.bottom.y pozisyonunu kullan)
+    if (
+      bx + padding < pair.x + PIPE_TOTAL_WIDTH &&
+      bx + bw - padding > pair.x &&
+      by + bh - padding > pair.bottom.y
+    ) {
+      gameOver();
+    }
+  });
+}
+
+function gameOver() {
+  isGameOver = true;
+  isPlaying = false;
+  cancelAnimationFrame(animationFrameRequest);
+  gameOverScreen.style.display = "inline";
+}
+
+function resetGame() {
+  isGameOver = false;
+  score = 0;
+  scoreText.text = "0";
+  birdY = 168;
+  velocity = 0;
   
-  <svg id="game-over-screen" display="none" layer="6">
-    <rect width="100%" height="100%" fill="black" opacity="0.7" pointer-events="visible" />
-    <text x="50%" y="40%" fill="white" font-family="System-Bold" font-size="40" text-anchor="middle">GAME OVER</text>
-    <text x="50%" y="60%" fill="white" font-size="24" text-anchor="middle">Tekrar Dokun</text>
-  </svg>
+  pipePairs[0].x = 350;
+  randomizePipeHeights(pipePairs[0]);
   
-  <rect id="touch-layer" width="100%" height="100%" opacity="0" pointer-events="visible" layer="7" />
-</svg>
+  pipePairs[1].x = 550;
+  randomizePipeHeights(pipePairs[1]);
+  
+  bird.y = birdY - (BIRD_HEIGHT / 2);
+  pipePairs.forEach(p => {
+    p.group.groupTransform.translate.x = p.x;
+  });
+
+  gameOverScreen.style.display = "none";
+}
+
+init();
