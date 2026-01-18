@@ -35,7 +35,7 @@ let velocity = 0;
 let score = 0;
 let highScoreData = { score: 0, date: "---" }; 
 let animationFrameRequest;
-let isHardMode = false;
+let speedLevel = 0; // Hız seviyesi kontrolü (0, 1, 2, 3)
 
 // --- DOM Elemanları ---
 const bird = document.getElementById("bird");
@@ -43,12 +43,12 @@ const scoreText = document.getElementById("score-text");
 const timeText = document.getElementById("time-text");
 const touchLayer = document.getElementById("touch-layer");
 
-// Ortak Menü Elemanları
 const menuScreen = document.getElementById("menu-screen");
 const menuTitle = document.getElementById("menu-title");
 const menuSubtitle = document.getElementById("menu-subtitle");
 const menuLabel = document.getElementById("menu-label");
 const menuValue = document.getElementById("menu-value");
+const menuExtra = document.getElementById("menu-extra"); // Yeni alan
 
 const pausedText = document.getElementById("paused-text");
 
@@ -90,28 +90,29 @@ function getCurrentDate() {
   return `${day}.${month}.${year}`;
 }
 
-// --- MENÜ YÖNETİMİ (Yeni Fonksiyon) ---
+// --- MENÜ YÖNETİMİ ---
 function updateMenuUI(state) {
   if (state === STATE_START) {
     menuTitle.text = "FLAPPY BIRD";
     menuTitle.style.fill = "yellow";
     menuSubtitle.text = "Başlamak İçin Dokun";
+    
     menuLabel.text = "EN YÜKSEK SKOR";
     menuValue.text = `${highScoreData.score} (${highScoreData.date})`;
+    menuExtra.text = ""; // Start ekranında ekstra bilgi yok
+    
     menuScreen.style.display = "inline";
   } 
   else if (state === STATE_GAMEOVER) {
     menuTitle.text = "GAME OVER";
-    menuTitle.style.fill = "red"; // Başlık kırmızı olsun
+    menuTitle.style.fill = "red";
     menuSubtitle.text = "Tekrar Oyna";
     
-    // Game Over ekranında mevcut skoru göster, altına da rekoru sıkıştırabiliriz
-    // Ama senin isteğin üzerine tek tasarım:
     menuLabel.text = "SKORUN";
-    menuValue.text = `${score}`; // Sadece o anki skor
+    menuValue.text = `${score}`; 
     
-    // İstersen burada rekoru da gösterebiliriz ama tasarım tek satır.
-    // Şimdilik sadece son skoru gösteriyorum.
+    // Game Over'da Rekoru altta göster
+    menuExtra.text = `Rekor: ${highScoreData.score} (${highScoreData.date})`;
     
     menuScreen.style.display = "inline";
   }
@@ -147,7 +148,7 @@ display.addEventListener("change", () => {
 function init() {
   loadHighScore();
   gameState = STATE_START;
-  updateMenuUI(STATE_START); // Başlangıç menüsünü hazırla
+  updateMenuUI(STATE_START);
   scoreText.text = ""; 
   
   birdY = 168;
@@ -170,7 +171,6 @@ function handleInput() {
     velocity = LIFT; 
   }
   else if (gameState === STATE_GAMEOVER) {
-    // Yeniden başlatırken önce resetle, sonra direkt başlat
     resetGameEntities();
     startGame();
   }
@@ -179,7 +179,7 @@ function handleInput() {
 function startGame() {
   resetGameEntities();
   gameState = STATE_PLAYING;
-  updateMenuUI(STATE_PLAYING); // Menüyü gizle
+  updateMenuUI(STATE_PLAYING);
   scoreText.text = "0";
   
   velocity = LIFT;
@@ -217,9 +217,21 @@ function updateBird() {
 }
 
 function updatePipes() {
-  if (score > 10 && !isHardMode) {
+  // --- ZORLUK SEVİYELERİ ---
+  // Skor 10 olunca -> Hız 4.5
+  if (score > 10 && speedLevel === 0) {
     currentPipeSpeed = 4.5;
-    isHardMode = true;
+    speedLevel = 1;
+  }
+  // Skor 20 olunca -> Hız 5.5
+  else if (score > 20 && speedLevel === 1) {
+    currentPipeSpeed = 5.5;
+    speedLevel = 2;
+  }
+  // Skor 30 olunca -> Hız 6.5
+  else if (score > 30 && speedLevel === 2) {
+    currentPipeSpeed = 6.5;
+    speedLevel = 3;
   }
 
   pipePairs.forEach(pair => {
@@ -306,7 +318,6 @@ function gameOver() {
     saveHighScore();
   }
   
-  // Game Over ekranını göster (Ortak menüyü kullanır)
   updateMenuUI(STATE_GAMEOVER);
 }
 
@@ -316,7 +327,7 @@ function resetGameEntities() {
   birdY = 168;
   velocity = 0;
   currentPipeSpeed = INITIAL_SPEED;
-  isHardMode = false;
+  speedLevel = 0; // Hız seviyesini sıfırla
   
   bird.href = "bird-mid.png"; 
 
